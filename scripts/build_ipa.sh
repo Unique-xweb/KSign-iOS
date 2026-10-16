@@ -16,10 +16,7 @@ OUTPUT_IPA="${BUILD_DIR}/${PROJECT_NAME}.ipa"
 echo "[*] Step 1: Generating Xcode project via XcodeGen..."
 xcodegen generate
 
-echo "[*] Step 2: Resolving Package Dependencies..."
-xcodebuild -resolvePackageDependencies -project "${PROJECT_NAME}.xcodeproj"
-
-echo "[*] Step 3: Compiling ${PROJECT_NAME} for iOS (generic/platform=iOS)..."
+echo "[*] Step 2: Compiling ${PROJECT_NAME} for iOS (generic/platform=iOS)..."
 xcodebuild build \
     -project "${PROJECT_NAME}.xcodeproj" \
     -scheme "${SCHEME_NAME}" \
@@ -31,7 +28,7 @@ xcodebuild build \
     CODE_SIGN_IDENTITY="" \
     AD_HOC_CODE_SIGNING_ALLOWED=YES
 
-echo "[*] Step 4: Extracting compiled bundle to Payload directory..."
+echo "[*] Step 3: Extracting compiled bundle to Payload directory..."
 rm -rf "${PAYLOAD_DIR}" "${OUTPUT_IPA}"
 mkdir -p "${PAYLOAD_DIR}"
 
@@ -43,7 +40,7 @@ fi
 
 cp -RL "${APP_BUNDLE}" "${PAYLOAD_DIR}/"
 
-echo "[*] Step 5: Packaging Payload into ${OUTPUT_IPA}..."
+echo "[*] Step 4: Packaging Payload into ${OUTPUT_IPA}..."
 cd "${BUILD_DIR}"
 zip -qr -9 "${OUTPUT_IPA}" Payload
 cd - > /dev/null
