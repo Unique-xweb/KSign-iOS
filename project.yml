@@ -17,6 +17,7 @@ targets:
       - path: Resources
     dependencies:
       - framework: Frameworks/OpenSSL.xcframework
+        codeSign: false
       - sdk: Security.framework
       - sdk: Network.framework
       - sdk: UniformTypeIdentifiers.framework
@@ -36,9 +37,9 @@ targets:
           - $(SRCROOT)/Frameworks/include
         INFOPLIST_FILE: Resources/Info.plist
         CODE_SIGN_STYLE: "Manual"
-        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_IDENTITY: ""
         CODE_SIGNING_REQUIRED: "NO"
-        CODE_SIGNING_ALLOWED: "YES"
+        CODE_SIGNING_ALLOWED: "NO"
         ENABLE_BITCODE: "NO"
         ALWAYS_SEARCH_USER_PATHS: "NO"
         GCC_PREPROCESSOR_DEFINITIONS:
