@@ -102,7 +102,7 @@ struct linkedit_data_command {
     uint32_t cmdsize;
     uint32_t dataoff;
     uint32_t datasize;
-};
+#endif
 
 static inline uint32_t swap_uint32(uint32_t val) {
     return ((val & 0xFF000000) >> 24) |
@@ -110,7 +110,6 @@ static inline uint32_t swap_uint32(uint32_t val) {
            ((val & 0x0000FF00) << 8)  |
            ((val & 0x000000FF) << 24);
 }
-#endif
 
 namespace KSign {
 
