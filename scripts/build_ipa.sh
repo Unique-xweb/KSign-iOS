@@ -23,9 +23,9 @@ xcodebuild build \
     -configuration "${CONFIGURATION}" \
     -destination 'generic/platform=iOS' \
     -derivedDataPath "${BUILD_DIR}/DerivedData" \
-    CODE_SIGN_IDENTITY="-" \
+    CODE_SIGN_IDENTITY="" \
     CODE_SIGNING_REQUIRED=NO \
-    CODE_SIGNING_ALLOWED=YES \
+    CODE_SIGNING_ALLOWED=NO \
     CODE_SIGN_STYLE=Manual
 
 echo "[*] Step 3: Extracting compiled bundle to Payload directory..."
