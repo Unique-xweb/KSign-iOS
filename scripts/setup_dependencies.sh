@@ -30,7 +30,7 @@ done
 echo "[+] Standard Darwin build utilities verified."
 
 # 3. Create build directories & download prebuilt OpenSSL XCFramework
-mkdir -p Frameworks
+mkdir -p Frameworks/include/openssl
 mkdir -p build/Payload
 
 if [ ! -d "Frameworks/OpenSSL.xcframework" ]; then
@@ -40,5 +40,9 @@ if [ ! -d "Frameworks/OpenSSL.xcframework" ]; then
     rm -f OpenSSL.xcframework.zip
     echo "[+] OpenSSL.xcframework installed to Frameworks/"
 fi
+
+# Map headers so #include <openssl/*.h> works seamlessly
+cp -RL Frameworks/OpenSSL.xcframework/ios-arm64/OpenSSL.framework/Headers/* Frameworks/include/openssl/
+echo "[+] OpenSSL headers mapped to Frameworks/include/openssl/"
 
 echo "[+] Dependency bootstrapping complete. Ready for project generation."
