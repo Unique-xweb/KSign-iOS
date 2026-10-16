@@ -16,24 +16,26 @@ OUTPUT_IPA="${BUILD_DIR}/${PROJECT_NAME}.ipa"
 echo "[*] Step 1: Generating Xcode project via XcodeGen..."
 xcodegen generate
 
-echo "[*] Step 2: Compiling ${PROJECT_NAME} for iOS (generic/platform=iOS)..."
-xcodebuild clean archive \
+echo "[*] Step 2: Resolving Package Dependencies..."
+xcodebuild -resolvePackageDependencies -project "${PROJECT_NAME}.xcodeproj"
+
+echo "[*] Step 3: Compiling ${PROJECT_NAME} for iOS (generic/platform=iOS)..."
+xcodebuild build \
     -project "${PROJECT_NAME}.xcodeproj" \
     -scheme "${SCHEME_NAME}" \
     -configuration "${CONFIGURATION}" \
-    -destination 'generic/platform=iOS' \
-    -archivePath "${ARCHIVE_PATH}" \
+    -sdk iphoneos \
+    -derivedDataPath "${BUILD_DIR}/DerivedData" \
     CODE_SIGNING_ALLOWED=NO \
     CODE_SIGNING_REQUIRED=NO \
     CODE_SIGN_IDENTITY="" \
-    AD_HOC_CODE_SIGNING_ALLOWED=YES \
-    -quiet
+    AD_HOC_CODE_SIGNING_ALLOWED=YES
 
-echo "[*] Step 3: Extracting compiled bundle to Payload directory..."
+echo "[*] Step 4: Extracting compiled bundle to Payload directory..."
 rm -rf "${PAYLOAD_DIR}" "${OUTPUT_IPA}"
 mkdir -p "${PAYLOAD_DIR}"
 
-APP_BUNDLE="${ARCHIVE_PATH}/Products/Applications/${PROJECT_NAME}.app"
+APP_BUNDLE="${BUILD_DIR}/DerivedData/Build/Products/${CONFIGURATION}-iphoneos/${PROJECT_NAME}.app"
 if [ ! -d "${APP_BUNDLE}" ]; then
     echo "[X] Error: Built application not found at ${APP_BUNDLE}"
     exit 1
@@ -41,7 +43,7 @@ fi
 
 cp -RL "${APP_BUNDLE}" "${PAYLOAD_DIR}/"
 
-echo "[*] Step 4: Packaging Payload into ${OUTPUT_IPA}..."
+echo "[*] Step 5: Packaging Payload into ${OUTPUT_IPA}..."
 cd "${BUILD_DIR}"
 zip -qr -9 "${OUTPUT_IPA}" Payload
 cd - > /dev/null
