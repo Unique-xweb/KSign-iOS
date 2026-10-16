@@ -33,12 +33,12 @@ targets:
         SWIFT_OBJC_BRIDGING_HEADER: Sources/KSignApp/KSign-Bridging-Header.h
         HEADER_SEARCH_PATHS:
           - $(SRCROOT)/Sources/CoreSignEngine/include
-          - $(SRCROOT)/Frameworks/OpenSSL.xcframework/ios-arm64/OpenSSL.framework/Headers
+          - $(SRCROOT)/Frameworks/include
         INFOPLIST_FILE: Resources/Info.plist
-        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGN_STYLE: "Manual"
+        CODE_SIGN_IDENTITY: "-"
         CODE_SIGNING_REQUIRED: "NO"
-        CODE_SIGN_IDENTITY: ""
-        AD_HOC_CODE_SIGNING_ALLOWED: "YES"
+        CODE_SIGNING_ALLOWED: "YES"
         ENABLE_BITCODE: "NO"
         ALWAYS_SEARCH_USER_PATHS: "NO"
         GCC_PREPROCESSOR_DEFINITIONS:
