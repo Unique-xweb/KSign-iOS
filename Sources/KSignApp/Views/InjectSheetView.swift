@@ -114,7 +114,7 @@ public struct InjectSheetView: View {
                 let outputName = "\(sourceFile.url.deletingPathExtension().lastPathComponent)_patched.ipa"
                 let outputURL = fileVM.documentsDirectory.appendingPathComponent(outputName)
 
-                try ZipArchiveHelper.zip(directoryURL: tempDir, destinationArchiveURL: outputURL)
+                try ZipArchiveHelper.zip(directoryURL: tempDir, outputArchiveURL: outputURL)
 
                 DispatchQueue.main.async {
                     self.isProcessing = false

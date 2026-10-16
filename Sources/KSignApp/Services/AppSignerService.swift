@@ -197,7 +197,7 @@ public final class AppSignerService {
         let finalFileName = "\(safeName)_signed_\(Int(Date().timeIntervalSince1970)).ipa"
         let outputIPAURL = outputDirectory.appendingPathComponent(finalFileName)
 
-        try ZipArchiveHelper.zip(directoryURL: tempDir, destinationArchiveURL: outputIPAURL)
+        try ZipArchiveHelper.zip(directoryURL: tempDir, outputArchiveURL: outputIPAURL)
 
         let finalAttributes = try fileManager.attributesOfItem(atPath: outputIPAURL.path)
         let finalSize = (finalAttributes[.size] as? Int64) ?? 0

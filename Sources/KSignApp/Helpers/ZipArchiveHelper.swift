@@ -110,6 +110,10 @@ public final class ZipArchiveHelper {
     }
 
     // MARK: - Zip App Bundle into IPA
+    public static func zip(directoryURL: URL, destinationArchiveURL: URL, progress: ((Double) -> Void)? = nil) throws {
+        try zip(directoryURL: directoryURL, outputArchiveURL: destinationArchiveURL, progress: progress)
+    }
+
     public static func zip(directoryURL: URL, outputArchiveURL: URL, progress: ((Double) -> Void)? = nil) throws {
         let fileManager = FileManager.default
         if fileManager.fileExists(atPath: outputArchiveURL.path) {
