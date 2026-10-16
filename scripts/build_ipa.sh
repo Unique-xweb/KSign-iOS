@@ -1,50 +1,48 @@
-#!/usr/bin/env bash
-# [LISTN] build_ipa.sh
-# Target: macOS Runner / xcodebuild iOS arm64
-# Deliverable: Signed or Unsigned Production KSign.ipa package
+name: Build KSign IPA
 
-set -euo pipefail
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
-PROJECT_NAME="KSign"
-SCHEME_NAME="KSign"
-CONFIGURATION="Release"
-BUILD_DIR="$(pwd)/build"
-ARCHIVE_PATH="${BUILD_DIR}/${PROJECT_NAME}.xcarchive"
-PAYLOAD_DIR="${BUILD_DIR}/Payload"
-OUTPUT_IPA="${BUILD_DIR}/${PROJECT_NAME}.ipa"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-echo "[*] Step 1: Generating Xcode project via XcodeGen..."
-xcodegen generate
+jobs:
+  build:
+    name: Build & Package IPA
+    runs-on: macos-15
 
-echo "[*] Step 2: Compiling ${PROJECT_NAME} for iOS (generic/platform=iOS)..."
-xcodebuild build \
-    -project "${PROJECT_NAME}.xcodeproj" \
-    -scheme "${SCHEME_NAME}" \
-    -configuration "${CONFIGURATION}" \
-    -destination 'generic/platform=iOS' \
-    -derivedDataPath "${BUILD_DIR}/DerivedData" \
-    CODE_SIGN_IDENTITY="-" \
-    CODE_SIGNING_REQUIRED=NO \
-    CODE_SIGNING_ALLOWED=YES \
-    CODE_SIGN_STYLE=Manual
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-echo "[*] Step 3: Extracting compiled bundle to Payload directory..."
-rm -rf "${PAYLOAD_DIR}" "${OUTPUT_IPA}"
-mkdir -p "${PAYLOAD_DIR}"
+      - name: Verify Xcode Version
+        run: |
+          xcodebuild -version
 
-APP_BUNDLE="${BUILD_DIR}/DerivedData/Build/Products/${CONFIGURATION}-iphoneos/${PROJECT_NAME}.app"
-if [ ! -d "${APP_BUNDLE}" ]; then
-    echo "[X] Error: Built application not found at ${APP_BUNDLE}"
-    exit 1
-fi
+      - name: Install Build Tooling (XcodeGen)
+        run: |
+          brew install xcodegen
 
-cp -RL "${APP_BUNDLE}" "${PAYLOAD_DIR}/"
+      - name: Run Setup Dependencies
+        run: |
+          chmod +x scripts/setup_dependencies.sh scripts/build_ipa.sh
+          ./scripts/setup_dependencies.sh
 
-echo "[*] Step 4: Packaging Payload into ${OUTPUT_IPA}..."
-cd "${BUILD_DIR}"
-zip -qr -9 "${OUTPUT_IPA}" Payload
-cd - > /dev/null
+      - name: Compile and Package KSign.ipa
+        run: |
+          ./scripts/build_ipa.sh
 
-echo "[+] IPA Package successfully built at: ${OUTPUT_IPA}"
-echo "[+] Size: $(du -sh "${OUTPUT_IPA}" | awk '{print $1}')"
-echo "[+] SHA-256: $(shasum -a 256 "${OUTPUT_IPA}" | awk '{print $1}')"
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KSign-ipa
+          path: build/KSign.ipa
+          if-no-files-found: error
