@@ -23,6 +23,7 @@ targets:
       - path: Resources
     dependencies:
       - package: OpenSSL
+        product: OpenSSL
       - sdk: Security.framework
       - sdk: Network.framework
       - sdk: UniformTypeIdentifiers.framework
@@ -40,7 +41,10 @@ targets:
         HEADER_SEARCH_PATHS:
           - $(SRCROOT)/Sources/CoreSignEngine/include
         INFOPLIST_FILE: Resources/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Resources/KSign.entitlements
+        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGN_IDENTITY: ""
+        AD_HOC_CODE_SIGNING_ALLOWED: "YES"
         ENABLE_BITCODE: "NO"
         ALWAYS_SEARCH_USER_PATHS: "NO"
         GCC_PREPROCESSOR_DEFINITIONS:
