@@ -21,12 +21,12 @@ xcodebuild build \
     -project "${PROJECT_NAME}.xcodeproj" \
     -scheme "${SCHEME_NAME}" \
     -configuration "${CONFIGURATION}" \
-    -sdk iphoneos \
+    -destination 'generic/platform=iOS' \
     -derivedDataPath "${BUILD_DIR}/DerivedData" \
-    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGN_IDENTITY="-" \
     CODE_SIGNING_REQUIRED=NO \
-    CODE_SIGN_IDENTITY="" \
-    AD_HOC_CODE_SIGNING_ALLOWED=YES
+    CODE_SIGNING_ALLOWED=YES \
+    CODE_SIGN_STYLE=Manual
 
 echo "[*] Step 3: Extracting compiled bundle to Payload directory..."
 rm -rf "${PAYLOAD_DIR}" "${OUTPUT_IPA}"
