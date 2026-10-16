@@ -28,7 +28,7 @@ xcodebuild build \
     CODE_SIGNING_ALLOWED=NO \
     CODE_SIGN_STYLE=Manual
 
-echo "[*] Step 3: Extracting compiled bundle to Payload directory..."
+echo "[*] Step 4: Extracting compiled bundle to Payload directory..."
 rm -rf "${PAYLOAD_DIR}" "${OUTPUT_IPA}"
 mkdir -p "${PAYLOAD_DIR}"
 
@@ -40,7 +40,7 @@ fi
 
 cp -RL "${APP_BUNDLE}" "${PAYLOAD_DIR}/"
 
-echo "[*] Step 4: Packaging Payload into ${OUTPUT_IPA}..."
+echo "[*] Step 5: Packaging Payload into ${OUTPUT_IPA}..."
 cd "${BUILD_DIR}"
 zip -qr -9 "${OUTPUT_IPA}" Payload
 cd - > /dev/null

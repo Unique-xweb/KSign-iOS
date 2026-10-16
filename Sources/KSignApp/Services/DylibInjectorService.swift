@@ -56,12 +56,10 @@ public final class DylibInjectorService {
         let loadCommandPath = "@rpath/\(dylibURL.lastPathComponent)"
 
         // 4. Invoke CoreSignEngine C++ Mach-O injector
-        var error: NSError?
-        let success = CoreSignEngine.injectDylib(atPath: loadCommandPath, intoBinaryAtPath: mainExecURL.path, isWeak: isWeak, error: &error)
-
-        if !success {
-            let msg = error?.localizedDescription ?? "LC_LOAD_DYLIB command insertion failed"
-            throw InjectorError.injectionFailed(msg)
+        do {
+            try CoreSignEngine.injectDylib(atPath: loadCommandPath, intoBinaryAtPath: mainExecURL.path, isWeak: isWeak)
+        } catch {
+            throw InjectorError.injectionFailed(error.localizedDescription)
         }
     }
 }

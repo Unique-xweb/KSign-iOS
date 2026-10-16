@@ -26,7 +26,7 @@ public final class ProvisionParser {
         }
 
         let rawData = try Data(contentsOf: fileURL)
-        guard let (xmlString, xmlData) = extractXMLPayload(from: rawData) else {
+        guard let (_, xmlData) = extractXMLPayload(from: rawData) else {
             throw ParseError.invalidCMSWrapper(fileURL.lastPathComponent)
         }
 

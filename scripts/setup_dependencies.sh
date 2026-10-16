@@ -41,7 +41,7 @@ if [ ! -d "Frameworks/OpenSSL.xcframework" ]; then
     echo "[+] OpenSSL.xcframework installed to Frameworks/"
 fi
 
-# Map headers so #include <openssl/*.h> works seamlessly
+# Ensure headers are in an openssl/ subdirectory for #include <openssl/*.h>
 cp -RL Frameworks/OpenSSL.xcframework/ios-arm64/OpenSSL.framework/Headers/* Frameworks/include/openssl/
 echo "[+] OpenSSL headers mapped to Frameworks/include/openssl/"
 

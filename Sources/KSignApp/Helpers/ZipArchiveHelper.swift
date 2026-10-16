@@ -21,6 +21,15 @@ public final class ZipArchiveHelper {
         }
     }
 
+    private struct ZipEntry {
+        var relativePath: String
+        var isDirectory: Bool
+        var uncompressedSize: UInt32
+        var compressedSize: UInt32
+        var crc32Value: UInt32
+        var localHeaderOffset: UInt32
+    }
+
     // MARK: - Unzip IPA Archive
     public static func unzip(archiveURL: URL, destinationURL: URL, progress: ((Double) -> Void)? = nil) throws {
         let fileManager = FileManager.default
@@ -37,7 +46,6 @@ public final class ZipArchiveHelper {
         }
 
         var offset: UInt64 = 0
-        let chunkSize = 65536
 
         while offset < fileSize - 4 {
             try fileHandle.seek(toOffset: offset)
@@ -58,10 +66,7 @@ public final class ZipArchiveHelper {
                 let extraLen = headerData.subdata(in: 24..<26).withUnsafeBytes { $0.load(as: UInt16.self) }
 
                 let nameData = fileHandle.readData(ofLength: Int(nameLen))
-                guard let relativePath = String(data: nameData, encoding: .utf8) else {
-                    offset += UInt64(30 + Int(nameLen) + Int(extraLen) + Int(compSize))
-                    continue
-                }
+                let relativePath = String(data: nameData, encoding: .utf8) ?? "unknown_\(offset)"
 
                 // Skip extra field
                 if extraLen > 0 {
@@ -76,65 +81,57 @@ public final class ZipArchiveHelper {
                     try fileManager.createDirectory(at: targetURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
 
                     let compressedData = fileHandle.readData(ofLength: Int(compSize))
-                    let decompressedData: Data
+                    let uncompressedData: Data
 
-                    if compMethod == 0 {
-                        // Stored (no compression)
-                        decompressedData = compressedData
-                    } else if compMethod == 8 {
-                        // Deflated
-                        decompressedData = try inflateData(compressedData, expectedSize: Int(uncompSize))
+                    if compMethod == 0 { // Stored
+                        uncompressedData = compressedData
+                    } else if compMethod == 8 { // Deflated
+                        uncompressedData = try inflateData(compressedData, expectedSize: Int(uncompSize))
                     } else {
-                        throw ZipError.decompressionFailed("Unsupported compression method: \(compMethod)")
+                        uncompressedData = compressedData
                     }
 
-                    try decompressedData.write(to: targetURL, options: .atomic)
+                    try uncompressedData.write(to: targetURL, options: .atomic)
                 }
 
-                offset += UInt64(30 + Int(nameLen) + Int(extraLen) + Int(compSize))
+                offset = try fileHandle.offset()
                 if fileSize > 0 {
                     progress?(Double(offset) / Double(fileSize))
                 }
             } else if sig == 0x02014b50 || sig == 0x06054b50 {
-                // Central Directory reached, extraction of payload files complete
+                // Central Directory or End of Central Directory reached
                 break
             } else {
                 offset += 1
             }
         }
+
         progress?(1.0)
     }
 
-    // MARK: - Zip Directory to IPA
-    public static func zip(directoryURL: URL, destinationArchiveURL: URL, progress: ((Double) -> Void)? = nil) throws {
+    // MARK: - Zip App Bundle into IPA
+    public static func zip(directoryURL: URL, outputArchiveURL: URL, progress: ((Double) -> Void)? = nil) throws {
         let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: destinationArchiveURL.path) {
-            try fileManager.removeItem(at: destinationArchiveURL)
+        if fileManager.fileExists(atPath: outputArchiveURL.path) {
+            try fileManager.removeItem(at: outputArchiveURL)
         }
 
-        fileManager.createFile(atPath: destinationArchiveURL.path, contents: nil, attributes: nil)
-        guard let outputHandle = try? FileHandle(forWritingTo: destinationArchiveURL) else {
-            throw ZipError.fileNotFound(destinationArchiveURL.path)
+        fileManager.createFile(atPath: outputArchiveURL.path, contents: nil, attributes: nil)
+        guard let outputHandle = try? FileHandle(forWritingTo: outputArchiveURL) else {
+            throw ZipError.fileNotFound("Cannot open \(outputArchiveURL.path) for writing.")
         }
         defer { try? outputHandle.close() }
 
         guard let enumerator = fileManager.enumerator(at: directoryURL,
-                                                      includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey],
-                                                      options: [.skipsHiddenFiles]) else {
+                                                      includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey],
+                                                      options: [],
+                                                      errorHandler: nil) else {
             throw ZipError.fileNotFound(directoryURL.path)
         }
 
-        struct ZipEntry {
-            let relativePath: String
-            let isDirectory: Bool
-            let uncompressedSize: UInt32
-            let compressedSize: UInt32
-            let crc32Value: UInt32
-            let localHeaderOffset: UInt32
-        }
-
         var entries: [ZipEntry] = []
-        let baseLength = directoryURL.path.hasSuffix("/") ? directoryURL.path.count : directoryURL.path.count + 1
+        let baseURL = directoryURL.deletingLastPathComponent()
+        let baseLength = baseURL.path.hasSuffix("/") ? baseURL.path.count : baseURL.path.count + 1
 
         for case let fileURL as URL in enumerator {
             let path = fileURL.path
@@ -212,7 +209,7 @@ public final class ZipArchiveHelper {
         data.append(Data(bytes: &uSize, count: 4))
         data.append(Data(bytes: &nameLen, count: 2))
         data.append(Data(bytes: &extraLen, count: 2))
-        data.append(path.data(using: .utf8) ?? Data())
+        data.append(path.data(using: String.Encoding.utf8) ?? Data())
         return data
     }
 
@@ -253,7 +250,7 @@ public final class ZipArchiveHelper {
         data.append(Data(bytes: &intAttrs, count: 2))
         data.append(Data(bytes: &extAttrs, count: 4))
         data.append(Data(bytes: &offset, count: 4))
-        data.append(entry.relativePath.data(using: .utf8) ?? Data())
+        data.append(entry.relativePath.data(using: String.Encoding.utf8) ?? Data())
         return data
     }
 
@@ -295,34 +292,36 @@ public final class ZipArchiveHelper {
             stream.next_in = UnsafeMutablePointer<UInt8>(mutating: rawBuffer.bindMemory(to: UInt8.self).baseAddress)
             stream.avail_in = uInt(data.count)
 
-            while stream.avail_in > 0 {
-                stream.next_out = &buffer
-                stream.avail_out = uInt(bufferSize)
+            try buffer.withUnsafeMutableBufferPointer { bufPtr in
+                while stream.avail_in > 0 {
+                    stream.next_out = bufPtr.baseAddress
+                    stream.avail_out = uInt(bufferSize)
 
-                let status = deflate(&stream, Z_NO_FLUSH)
-                guard status == Z_OK else {
-                    throw ZipError.compressionFailed("deflate returned error: \(status)")
+                    let status = deflate(&stream, Z_NO_FLUSH)
+                    guard status == Z_OK else {
+                        throw ZipError.compressionFailed("deflate returned error: \(status)")
+                    }
+
+                    let bytesProduced = bufferSize - Int(stream.avail_out)
+                    if bytesProduced > 0 {
+                        output.append(bufPtr.baseAddress!, count: bytesProduced)
+                    }
                 }
 
-                let bytesProduced = bufferSize - Int(stream.avail_out)
-                if bytesProduced > 0 {
-                    output.append(buffer, count: bytesProduced)
-                }
+                repeat {
+                    stream.next_out = bufPtr.baseAddress
+                    stream.avail_out = uInt(bufferSize)
+                    let status = deflate(&stream, Z_FINISH)
+                    guard status == Z_OK || status == Z_STREAM_END else {
+                        throw ZipError.compressionFailed("deflate Z_FINISH error: \(status)")
+                    }
+                    let bytesProduced = bufferSize - Int(stream.avail_out)
+                    if bytesProduced > 0 {
+                        output.append(bufPtr.baseAddress!, count: bytesProduced)
+                    }
+                    if status == Z_STREAM_END { break }
+                } while true
             }
-
-            repeat {
-                stream.next_out = &buffer
-                stream.avail_out = uInt(bufferSize)
-                let status = deflate(&stream, Z_FINISH)
-                guard status == Z_OK || status == Z_STREAM_END else {
-                    throw ZipError.compressionFailed("deflate Z_FINISH error: \(status)")
-                }
-                let bytesProduced = bufferSize - Int(stream.avail_out)
-                if bytesProduced > 0 {
-                    output.append(buffer, count: bytesProduced)
-                }
-                if status == Z_STREAM_END { break }
-            } while true
         }
 
         return output
@@ -344,19 +343,21 @@ public final class ZipArchiveHelper {
             stream.next_in = UnsafeMutablePointer<UInt8>(mutating: rawBuffer.bindMemory(to: UInt8.self).baseAddress)
             stream.avail_in = uInt(data.count)
 
-            var status: Int32 = Z_OK
-            while status == Z_OK {
-                stream.next_out = &buffer
-                stream.avail_out = uInt(bufferSize)
+            try buffer.withUnsafeMutableBufferPointer { bufPtr in
+                var status: Int32 = Z_OK
+                while status == Z_OK {
+                    stream.next_out = bufPtr.baseAddress
+                    stream.avail_out = uInt(bufferSize)
 
-                status = inflate(&stream, Z_SYNC_FLUSH)
-                if status != Z_OK && status != Z_STREAM_END {
-                    throw ZipError.decompressionFailed("inflate returned error: \(status)")
-                }
+                    status = inflate(&stream, Z_SYNC_FLUSH)
+                    if status != Z_OK && status != Z_STREAM_END {
+                        throw ZipError.decompressionFailed("inflate returned error: \(status)")
+                    }
 
-                let bytesProduced = bufferSize - Int(stream.avail_out)
-                if bytesProduced > 0 {
-                    output.append(buffer, count: bytesProduced)
+                    let bytesProduced = bufferSize - Int(stream.avail_out)
+                    if bytesProduced > 0 {
+                        output.append(bufPtr.baseAddress!, count: bytesProduced)
+                    }
                 }
             }
         }

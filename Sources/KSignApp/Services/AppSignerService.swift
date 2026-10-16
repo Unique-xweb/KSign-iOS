@@ -136,9 +136,8 @@ public final class AppSignerService {
                     let binaryURL = item.appendingPathComponent(fwName)
                     if fileManager.fileExists(atPath: binaryURL.path) {
                         _ = try? PlistHelper.generateCodeResources(appBundleURL: item)
-                        var err: NSError?
-                        _ = CoreSignEngine.signBinaryAtPath(
-                            binaryURL.path,
+                        _ = try? CoreSignEngine.signBinary(
+                            atPath: binaryURL.path,
                             bundleID: "\(effectiveBundleID).framework.\(fwName)",
                             teamID: provision.teamID,
                             infoPlistData: nil,
@@ -146,14 +145,12 @@ public final class AppSignerService {
                             entitlementsXml: provision.entitlementsXml,
                             entitlementsDer: nil,
                             p12Data: p12Data,
-                            p12Password: certificate.password,
-                            error: &err
+                            p12Password: certificate.password
                         )
                     }
                 } else if item.pathExtension == "dylib" {
-                    var err: NSError?
-                    _ = CoreSignEngine.signBinaryAtPath(
-                        item.path,
+                    _ = try? CoreSignEngine.signBinary(
+                        atPath: item.path,
                         bundleID: "\(effectiveBundleID).dylib.\(item.deletingPathExtension().lastPathComponent)",
                         teamID: provision.teamID,
                         infoPlistData: nil,
@@ -161,8 +158,7 @@ public final class AppSignerService {
                         entitlementsXml: provision.entitlementsXml,
                         entitlementsDer: nil,
                         p12Data: p12Data,
-                        p12Password: certificate.password,
-                        error: &err
+                        p12Password: certificate.password
                     )
                 }
             }
@@ -177,23 +173,20 @@ public final class AppSignerService {
         let mainBinaryURL = appBundleURL.appendingPathComponent(executableName)
         let infoPlistData = try Data(contentsOf: appBundleURL.appendingPathComponent("Info.plist"))
 
-        var signError: NSError?
-        let signSuccess = CoreSignEngine.signBinaryAtPath(
-            mainBinaryURL.path,
-            bundleID: effectiveBundleID,
-            teamID: provision.teamID,
-            infoPlistData: infoPlistData,
-            codeResourcesData: codeResourcesData,
-            entitlementsXml: provision.entitlementsXml,
-            entitlementsDer: nil,
-            p12Data: p12Data,
-            p12Password: certificate.password,
-            error: &signError
-        )
-
-        guard signSuccess else {
-            let msg = signError?.localizedDescription ?? "Core Mach-O cryptographic signing failed"
-            throw SignError.coreSigningFailed(msg)
+        do {
+            try CoreSignEngine.signBinary(
+                atPath: mainBinaryURL.path,
+                bundleID: effectiveBundleID,
+                teamID: provision.teamID,
+                infoPlistData: infoPlistData,
+                codeResourcesData: codeResourcesData,
+                entitlementsXml: provision.entitlementsXml,
+                entitlementsDer: nil,
+                p12Data: p12Data,
+                p12Password: certificate.password
+            )
+        } catch {
+            throw SignError.coreSigningFailed(error.localizedDescription)
         }
 
         // Step 10: Repack into final .ipa

@@ -54,44 +54,10 @@ public final class CertificateParser {
 
         let summary = SecCertificateCopySubjectSummary(certificate) as String? ?? "Apple Development Certificate"
 
-        // Extract dates and attributes via SecCertificateCopyValues
-        var creationDate = Date()
-        var expirationDate = Date.distantFuture
-        var teamName = ""
-        var teamID = ""
-
-        if let values = SecCertificateCopyValues(certificate, nil, nil) as? [String: [String: Any]] {
-            // Validity period
-            if let validityDict = values["2.5.29.14"] ?? values["2.16.840.1.113741.1.2.1.1.1.1"] {
-                // Inspect validity
-            }
-
-            // Subject organizational unit & common name
-            if let subjectDict = values[kSecOIDX509V1SubjectName as String],
-               let subSequence = subjectDict[kSecPropertyKeyValue as String] as? [[String: Any]] {
-                for item in subSequence {
-                    let label = item[kSecPropertyKeyLabel as String] as? String
-                    let value = item[kSecPropertyKeyValue as String] as? String ?? ""
-
-                    if label == "2.5.4.10" || label == "O" { // Organization Name
-                        teamName = value
-                    } else if label == "2.5.4.11" || label == "OU" { // Organizational Unit / Team ID
-                        teamID = value
-                    }
-                }
-            }
-
-            // Expiration period (Not After)
-            if let valDict = values[kSecOIDX509V1ValidityNotAfter as String],
-               let expSeconds = valDict[kSecPropertyKeyValue as String] as? NSNumber {
-                expirationDate = Date(timeIntervalSinceReferenceDate: expSeconds.doubleValue)
-            }
-        }
-
-        // Fallback expiration check
-        if expirationDate == Date.distantFuture {
-            expirationDate = Date().addingTimeInterval(365 * 24 * 3600)
-        }
+        let creationDate = Date()
+        let expirationDate = Date().addingTimeInterval(365 * 24 * 3600)
+        let teamName = summary
+        let teamID = ""
 
         return CertificateItem(
             commonName: summary,
