@@ -5,7 +5,6 @@ options:
   bundleIdPrefix: com.ksign
   deploymentTarget:
     iOS: "15.0"
-  xcodeVersion: "15.4"
   createIntermediateGroups: true
 
 targets:
